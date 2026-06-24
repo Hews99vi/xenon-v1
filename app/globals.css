@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f7f5f0;
+  --foreground: #0a0a0a;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+@layer components {
+  .admin-input {
+    @apply h-12 w-full border border-black bg-white px-4 text-sm text-black outline-none transition focus:shadow-[4px_4px_0_#0a0a0a];
+  }
+
+  .admin-file {
+    @apply w-full border border-black bg-white px-4 py-3 text-sm text-black file:mr-4 file:border-0 file:bg-black file:px-4 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-[0.18em] file:text-white;
+  }
+
+  .admin-button {
+    @apply items-center justify-center border border-black bg-black px-5 py-3 text-xs font-semibold uppercase tracking-[0.22em] text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-500;
+  }
+
+  .store-input {
+    @apply h-12 w-full border border-black bg-white px-4 text-sm text-black outline-none transition focus:shadow-[4px_4px_0_#0a0a0a];
+  }
+
+  .markdown-content {
+    @apply text-base leading-8 text-neutral-800;
+  }
+
+  .markdown-content h1,
+  .markdown-content h2,
+  .markdown-content h3 {
+    @apply mt-10 font-semibold leading-tight text-black;
+  }
+
+  .markdown-content h1 {
+    @apply text-4xl;
+  }
+
+  .markdown-content h2 {
+    @apply text-3xl;
+  }
+
+  .markdown-content h3 {
+    @apply text-2xl;
+  }
+
+  .markdown-content p,
+  .markdown-content ul,
+  .markdown-content ol,
+  .markdown-content blockquote {
+    @apply mt-5;
+  }
+
+  .markdown-content ul {
+    @apply list-disc pl-6;
+  }
+
+  .markdown-content ol {
+    @apply list-decimal pl-6;
+  }
+
+  .markdown-content a {
+    @apply text-black underline;
+  }
+
+  .markdown-content blockquote {
+    @apply border-l-4 border-black pl-5 text-neutral-600;
+  }
+
+  .markdown-content img {
+    @apply border border-black;
+  }
+}
