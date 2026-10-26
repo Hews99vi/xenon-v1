@@ -34,6 +34,7 @@ create table if not exists public.products (
   short_description text,
   base_price numeric(12, 2) not null check (base_price >= 0),
   sale_price numeric(12, 2) check (sale_price is null or sale_price >= 0),
+  effective_price numeric(12, 2) generated always as (coalesce(sale_price, base_price)) stored,
   sku text not null unique,
   status text not null default 'draft' check (status in ('draft', 'active', 'out_of_stock', 'archived')),
   is_featured boolean not null default false,
@@ -41,10 +42,14 @@ create table if not exists public.products (
   seo_description text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint products_sale_price_check check (
+  constraint products_sale_price_lte_base_price_check check (
     sale_price is null or sale_price <= base_price
   )
 );
+
+alter table public.products
+add column if not exists effective_price numeric(12, 2)
+generated always as (coalesce(sale_price, base_price)) stored;
 
 create table if not exists public.product_images (
   id uuid primary key default gen_random_uuid(),
@@ -146,14 +151,18 @@ create table if not exists public.orders (
   tax_total numeric(12, 2) not null default 0 check (tax_total >= 0),
   grand_total numeric(12, 2) not null check (grand_total >= 0),
   currency text not null default 'LKR',
-  payment_method text not null default 'payhere' check (payment_method in ('payhere', 'cod', 'bank_transfer')),
+  payment_method text not null default 'cod' check (payment_method in ('payhere', 'cod', 'bank_transfer')),
   payment_status text not null default 'pending' check (payment_status in ('pending', 'paid', 'failed', 'refunded', 'cancelled')),
   order_status text not null default 'pending' check (order_status in ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded')),
   customer_notes text,
   admin_notes text,
+  stock_released_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.orders
+add column if not exists stock_released_at timestamptz;
 
 create table if not exists public.order_items (
   id uuid primary key default gen_random_uuid(),
@@ -173,7 +182,7 @@ create table if not exists public.order_items (
 create table if not exists public.payment_transactions (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references public.orders(id) on delete cascade,
-  provider text not null default 'payhere',
+  provider text not null default 'manual',
   provider_transaction_id text,
   merchant_id text,
   payment_id text,
@@ -185,14 +194,29 @@ create table if not exists public.payment_transactions (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.newsletter_subscribers (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  status text not null default 'active' check (status in ('active', 'unsubscribed')),
+  source text,
+  subscribed_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists newsletter_subscribers_email_uidx
+on public.newsletter_subscribers (lower(email));
+
 create table if not exists public.banners (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   subtitle text,
+  eyebrow text,
   image_url text,
   mobile_image_url text,
   cta_label text,
   cta_url text,
+  secondary_cta_label text,
+  secondary_cta_url text,
   placement text not null default 'home_hero',
   is_active boolean not null default true,
   sort_order integer not null default 0 check (sort_order >= 0),
@@ -203,6 +227,45 @@ create table if not exists public.banners (
   constraint banners_date_check check (
     ends_at is null or starts_at is null or ends_at > starts_at
   )
+);
+
+alter table public.banners
+add column if not exists eyebrow text;
+
+alter table public.banners
+add column if not exists secondary_cta_label text;
+
+alter table public.banners
+add column if not exists secondary_cta_url text;
+
+create table if not exists public.homepage_sections (
+  id uuid primary key default gen_random_uuid(),
+  section_key text not null unique,
+  micro_label text,
+  title text not null,
+  body text,
+  cta_label text,
+  cta_url text,
+  is_active boolean not null default true,
+  sort_order integer not null default 0 check (sort_order >= 0),
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.homepage_section_items (
+  id uuid primary key default gen_random_uuid(),
+  section_id uuid not null references public.homepage_sections(id) on delete cascade,
+  title text not null,
+  subtitle text,
+  image_url text,
+  cta_label text,
+  cta_url text,
+  is_active boolean not null default true,
+  sort_order integer not null default 0 check (sort_order >= 0),
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists public.blog_posts (
@@ -255,8 +318,47 @@ create table if not exists public.admin_profiles (
   updated_at timestamptz not null default now()
 );
 
+-- Admin-managed media is part of the application setup, not an optional
+-- module. Supabase creates storage.buckets and storage.objects by default.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values
+  (
+    'blog-images',
+    'blog-images',
+    true,
+    10485760,
+    array['image/png', 'image/jpeg', 'image/webp']
+  ),
+  (
+    'banner-images',
+    'banner-images',
+    true,
+    10485760,
+    array['image/png', 'image/jpeg', 'image/webp']
+  ),
+  (
+    'category-images',
+    'category-images',
+    true,
+    5242880,
+    array['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
+  ),
+  (
+    'product-images',
+    'product-images',
+    true,
+    10485760,
+    array['image/png', 'image/jpeg', 'image/webp']
+  )
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
 create index if not exists categories_active_sort_idx on public.categories (is_active, sort_order);
 create index if not exists products_category_idx on public.products (category_id);
+create index if not exists products_effective_price_idx on public.products (effective_price);
 create index if not exists products_status_featured_idx on public.products (status, is_featured);
 create index if not exists product_images_product_sort_idx on public.product_images (product_id, sort_order);
 create index if not exists product_variants_product_idx on public.product_variants (product_id);
@@ -276,7 +378,75 @@ create index if not exists order_items_variant_idx on public.order_items (varian
 create index if not exists payment_transactions_order_idx on public.payment_transactions (order_id);
 create unique index if not exists payment_transactions_provider_transaction_uidx
 on public.payment_transactions (provider, provider_transaction_id);
+create index if not exists newsletter_subscribers_status_subscribed_idx
+on public.newsletter_subscribers (status, subscribed_at desc);
 create index if not exists blog_posts_status_published_idx on public.blog_posts (status, published_at desc);
+create index if not exists banners_placement_active_sort_idx on public.banners (placement, is_active, sort_order);
+create index if not exists homepage_sections_key_active_idx on public.homepage_sections (section_key, is_active);
+create index if not exists homepage_section_items_section_sort_idx on public.homepage_section_items (section_id, is_active, sort_order);
+create unique index if not exists homepage_section_items_section_title_uidx
+on public.homepage_section_items (section_id, lower(title));
+
+drop policy if exists "Admin image uploads" on storage.objects;
+create policy "Admin image uploads"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id in ('banner-images', 'blog-images', 'category-images', 'product-images')
+  and exists (
+    select 1
+    from public.admin_profiles
+    where admin_profiles.id = auth.uid()
+      and admin_profiles.is_active = true
+  )
+);
+
+drop policy if exists "Admin image updates" on storage.objects;
+create policy "Admin image updates"
+on storage.objects
+for update
+to authenticated
+using (
+  bucket_id in ('banner-images', 'blog-images', 'category-images', 'product-images')
+  and exists (
+    select 1
+    from public.admin_profiles
+    where admin_profiles.id = auth.uid()
+      and admin_profiles.is_active = true
+  )
+)
+with check (
+  bucket_id in ('banner-images', 'blog-images', 'category-images', 'product-images')
+  and exists (
+    select 1
+    from public.admin_profiles
+    where admin_profiles.id = auth.uid()
+      and admin_profiles.is_active = true
+  )
+);
+
+drop policy if exists "Admin image deletes" on storage.objects;
+create policy "Admin image deletes"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id in ('banner-images', 'blog-images', 'category-images', 'product-images')
+  and exists (
+    select 1
+    from public.admin_profiles
+    where admin_profiles.id = auth.uid()
+      and admin_profiles.is_active = true
+  )
+);
+
+drop policy if exists "Public image reads" on storage.objects;
+create policy "Public image reads"
+on storage.objects
+for select
+to public
+using (bucket_id in ('banner-images', 'blog-images', 'category-images', 'product-images'));
 
 drop trigger if exists set_categories_updated_at on public.categories;
 create trigger set_categories_updated_at
@@ -308,9 +478,24 @@ create trigger set_orders_updated_at
 before update on public.orders
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_newsletter_subscribers_updated_at on public.newsletter_subscribers;
+create trigger set_newsletter_subscribers_updated_at
+before update on public.newsletter_subscribers
+for each row execute function public.set_updated_at();
+
 drop trigger if exists set_banners_updated_at on public.banners;
 create trigger set_banners_updated_at
 before update on public.banners
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_homepage_sections_updated_at on public.homepage_sections;
+create trigger set_homepage_sections_updated_at
+before update on public.homepage_sections
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_homepage_section_items_updated_at on public.homepage_section_items;
+create trigger set_homepage_section_items_updated_at
+before update on public.homepage_section_items
 for each row execute function public.set_updated_at();
 
 drop trigger if exists set_blog_posts_updated_at on public.blog_posts;
@@ -348,6 +533,167 @@ as $$
   );
 $$;
 
+create or replace function public.admin_upsert_product(
+  p_product_id uuid,
+  p_product jsonb,
+  p_images jsonb,
+  p_variants jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_product_id uuid;
+  product_slug text;
+  image_row record;
+  variant_row record;
+  next_image_sort_order integer;
+  has_primary_image boolean;
+begin
+  if not public.is_active_admin() then
+    raise exception 'not_authorized';
+  end if;
+
+  if jsonb_typeof(coalesce(p_product, '{}'::jsonb)) <> 'object'
+    or jsonb_typeof(coalesce(p_images, '[]'::jsonb)) <> 'array'
+    or jsonb_typeof(coalesce(p_variants, '[]'::jsonb)) <> 'array' then
+    raise exception 'invalid_product_payload';
+  end if;
+
+  if p_product_id is null then
+    insert into public.products (
+      category_id, name, slug, description, short_description,
+      base_price, sale_price, sku, status, is_featured,
+      seo_title, seo_description
+    )
+    values (
+      (p_product->>'category_id')::uuid,
+      trim(p_product->>'name'),
+      trim(p_product->>'slug'),
+      nullif(trim(p_product->>'description'), ''),
+      nullif(trim(p_product->>'short_description'), ''),
+      (p_product->>'base_price')::numeric,
+      nullif(trim(p_product->>'sale_price'), '')::numeric,
+      trim(p_product->>'sku'),
+      p_product->>'status',
+      coalesce((p_product->>'is_featured')::boolean, false),
+      nullif(trim(p_product->>'seo_title'), ''),
+      nullif(trim(p_product->>'seo_description'), '')
+    )
+    returning id, slug into v_product_id, product_slug;
+  else
+    update public.products
+    set
+      category_id = (p_product->>'category_id')::uuid,
+      name = trim(p_product->>'name'),
+      slug = trim(p_product->>'slug'),
+      description = nullif(trim(p_product->>'description'), ''),
+      short_description = nullif(trim(p_product->>'short_description'), ''),
+      base_price = (p_product->>'base_price')::numeric,
+      sale_price = nullif(trim(p_product->>'sale_price'), '')::numeric,
+      sku = trim(p_product->>'sku'),
+      status = p_product->>'status',
+      is_featured = coalesce((p_product->>'is_featured')::boolean, false),
+      seo_title = nullif(trim(p_product->>'seo_title'), ''),
+      seo_description = nullif(trim(p_product->>'seo_description'), '')
+    where id = p_product_id
+    returning id, slug into v_product_id, product_slug;
+
+    if not found then
+      raise exception 'product_not_found';
+    end if;
+  end if;
+
+  select coalesce(max(sort_order) + 1, 0), coalesce(bool_or(is_primary), false)
+  into next_image_sort_order, has_primary_image
+  from public.product_images
+  where public.product_images.product_id = v_product_id;
+
+  for image_row in
+    select * from jsonb_to_recordset(p_images) as image(image_url text, alt_text text)
+  loop
+    if nullif(trim(image_row.image_url), '') is null then
+      raise exception 'invalid_product_image';
+    end if;
+
+    insert into public.product_images (
+      product_id, image_url, alt_text, sort_order, is_primary
+    )
+    values (
+      v_product_id,
+      trim(image_row.image_url),
+      nullif(trim(image_row.alt_text), ''),
+      next_image_sort_order,
+      not has_primary_image and next_image_sort_order = coalesce(next_image_sort_order, 0)
+    );
+
+    has_primary_image := true;
+    next_image_sort_order := next_image_sort_order + 1;
+  end loop;
+
+  delete from public.product_variants existing_variant
+  where existing_variant.product_id = v_product_id
+    and not exists (
+      select 1
+      from jsonb_to_recordset(p_variants) as submitted_variant(id uuid)
+      where submitted_variant.id is not null
+        and submitted_variant.id = existing_variant.id
+    );
+
+  for variant_row in
+    select * from jsonb_to_recordset(p_variants) as variant(
+      id uuid, color text, size text, sku text, price numeric,
+      stock_quantity integer, is_active boolean
+    )
+  loop
+    if nullif(trim(variant_row.sku), '') is null then
+      raise exception 'invalid_variant_sku';
+    end if;
+
+    if variant_row.id is null then
+      insert into public.product_variants (
+        product_id, color, size, sku, price, stock_quantity, is_active
+      )
+      values (
+        v_product_id,
+        nullif(trim(variant_row.color), ''),
+        coalesce(nullif(trim(variant_row.size), ''), 'Free Size'),
+        trim(variant_row.sku),
+        variant_row.price,
+        variant_row.stock_quantity,
+        coalesce(variant_row.is_active, true)
+      );
+    else
+      if not exists (
+        select 1 from public.product_variants
+        where id = variant_row.id
+          and public.product_variants.product_id = v_product_id
+      ) then
+        raise exception 'variant_not_found';
+      end if;
+
+      update public.product_variants
+      set
+        color = nullif(trim(variant_row.color), ''),
+        size = coalesce(nullif(trim(variant_row.size), ''), 'Free Size'),
+        sku = trim(variant_row.sku),
+        price = variant_row.price,
+        stock_quantity = variant_row.stock_quantity,
+        is_active = coalesce(variant_row.is_active, true)
+      where id = variant_row.id
+        and public.product_variants.product_id = v_product_id;
+    end if;
+  end loop;
+
+  return jsonb_build_object('product_id', v_product_id, 'slug', product_slug);
+end;
+$$;
+
+revoke execute on function public.admin_upsert_product(uuid, jsonb, jsonb, jsonb) from public, anon;
+grant execute on function public.admin_upsert_product(uuid, jsonb, jsonb, jsonb) to authenticated, service_role;
+
 create or replace function public.checkout_transaction(payload jsonb)
 returns jsonb
 language plpgsql
@@ -359,6 +705,7 @@ declare
   item_quantity integer;
   item_product_id uuid;
   item_variant_id uuid;
+  requested_item record;
   variant_row record;
   delivery_row record;
   promo_row record;
@@ -375,25 +722,37 @@ begin
     raise exception 'order_number_required';
   end if;
 
-  if payload->>'payment_method' not in ('cod', 'payhere') then
-    raise exception 'invalid_payment_method';
+  if payload->>'payment_method' <> 'cod' then
+    raise exception 'unsupported_payment_method';
   end if;
 
   if jsonb_typeof(payload->'items') <> 'array' or jsonb_array_length(payload->'items') = 0 then
     raise exception 'cart_empty';
   end if;
 
-  select id, name, city, district, delivery_fee
+  select dz.id, dz.name, dz.city, dz.district, dz.delivery_fee
   into delivery_row
-  from public.delivery_zones
-  where id = (payload->>'delivery_zone_id')::uuid
-    and is_active = true;
+  from public.delivery_zones dz
+  where dz.id = (payload->>'delivery_zone_id')::uuid
+    and dz.is_active = true;
 
   if not found then
     raise exception 'delivery_zone_not_found';
   end if;
 
   delivery_fee := round(delivery_row.delivery_fee, 2);
+
+  create temporary table if not exists checkout_requested_items (
+    product_id uuid not null,
+    variant_id uuid not null,
+    quantity integer not null
+  ) on commit drop;
+
+  create temporary table if not exists checkout_requested_items_merged (
+    product_id uuid not null,
+    variant_id uuid not null,
+    quantity integer not null
+  ) on commit drop;
 
   create temporary table if not exists checkout_order_items (
     product_id uuid not null,
@@ -407,6 +766,8 @@ begin
     line_total numeric(12, 2) not null
   ) on commit drop;
 
+  truncate table checkout_requested_items;
+  truncate table checkout_requested_items_merged;
   truncate table checkout_order_items;
 
   for item in select * from jsonb_array_elements(payload->'items')
@@ -418,6 +779,49 @@ begin
     if item_quantity is null or item_quantity <= 0 then
       raise exception 'invalid_quantity';
     end if;
+
+    insert into checkout_requested_items (
+      product_id,
+      variant_id,
+      quantity
+    )
+    values (
+      item_product_id,
+      item_variant_id,
+      item_quantity
+    );
+  end loop;
+
+  insert into checkout_requested_items_merged (
+    product_id,
+    variant_id,
+    quantity
+  )
+  select
+    product_id,
+    variant_id,
+    sum(quantity)::integer
+  from checkout_requested_items
+  group by product_id, variant_id;
+
+  truncate table checkout_requested_items;
+
+  insert into checkout_requested_items (
+    product_id,
+    variant_id,
+    quantity
+  )
+  select
+    product_id,
+    variant_id,
+    quantity
+  from checkout_requested_items_merged;
+
+  for requested_item in select * from checkout_requested_items
+  loop
+    item_quantity := requested_item.quantity;
+    item_product_id := requested_item.product_id;
+    item_variant_id := requested_item.variant_id;
 
     select
       pv.id as variant_id,
@@ -611,7 +1015,120 @@ begin
 end;
 $$;
 
-grant execute on function public.checkout_transaction(jsonb) to anon, authenticated;
+revoke execute on function public.checkout_transaction(jsonb) from public, anon, authenticated;
+grant execute on function public.checkout_transaction(jsonb) to service_role;
+
+create or replace function public.release_order_stock(
+  p_order_id uuid default null,
+  p_order_number text default null,
+  p_cancel_order boolean default true,
+  p_payment_status text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  order_row record;
+  released_at timestamptz := now();
+  restored_quantity integer := 0;
+begin
+  if not public.is_active_admin() and coalesce(auth.role(), '') <> 'service_role' then
+    raise exception 'not_authorized';
+  end if;
+
+  if p_order_id is null and nullif(trim(coalesce(p_order_number, '')), '') is null then
+    raise exception 'order_identifier_required';
+  end if;
+
+  if p_payment_status is not null and p_payment_status not in ('pending', 'paid', 'failed', 'refunded', 'cancelled') then
+    raise exception 'invalid_payment_status';
+  end if;
+
+  select
+    id,
+    order_number,
+    order_status,
+    payment_status,
+    stock_released_at
+  into order_row
+  from public.orders
+  where (
+    p_order_id is not null
+    and id = p_order_id
+  )
+  or (
+    p_order_id is null
+    and order_number = nullif(trim(coalesce(p_order_number, '')), '')
+  )
+  for update;
+
+  if not found then
+    raise exception 'order_not_found';
+  end if;
+
+  if order_row.stock_released_at is not null then
+    if p_cancel_order and order_row.order_status <> 'cancelled' then
+      update public.orders
+      set
+        order_status = 'cancelled',
+        payment_status = coalesce(p_payment_status, payment_status)
+      where id = order_row.id;
+    end if;
+
+    return jsonb_build_object(
+      'order_id', order_row.id,
+      'order_number', order_row.order_number,
+      'stock_released', false,
+      'already_released', true,
+      'stock_released_at', order_row.stock_released_at,
+      'restored_quantity', 0
+    );
+  end if;
+
+  if order_row.order_status not in ('pending', 'confirmed', 'processing', 'cancelled') then
+    raise exception 'order_stock_release_not_allowed';
+  end if;
+
+  select coalesce(sum(quantity), 0)::integer
+  into restored_quantity
+  from public.order_items
+  where order_id = order_row.id
+    and variant_id is not null;
+
+  update public.product_variants pv
+  set stock_quantity = pv.stock_quantity + order_item_totals.quantity
+  from (
+    select
+      variant_id,
+      sum(quantity)::integer as quantity
+    from public.order_items
+    where order_id = order_row.id
+      and variant_id is not null
+    group by variant_id
+  ) as order_item_totals
+  where pv.id = order_item_totals.variant_id;
+
+  update public.orders
+  set
+    stock_released_at = released_at,
+    order_status = case when p_cancel_order then 'cancelled' else order_status end,
+    payment_status = coalesce(p_payment_status, payment_status)
+  where id = order_row.id;
+
+  return jsonb_build_object(
+    'order_id', order_row.id,
+    'order_number', order_row.order_number,
+    'stock_released', true,
+    'already_released', false,
+    'stock_released_at', released_at,
+    'restored_quantity', restored_quantity
+  );
+end;
+$$;
+
+grant execute on function public.release_order_stock(uuid, text, boolean, text) to authenticated, service_role;
 
 alter table public.categories enable row level security;
 alter table public.products enable row level security;
@@ -622,7 +1139,10 @@ alter table public.delivery_zones enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.payment_transactions enable row level security;
+alter table public.newsletter_subscribers enable row level security;
 alter table public.banners enable row level security;
+alter table public.homepage_sections enable row level security;
+alter table public.homepage_section_items enable row level security;
 alter table public.blog_posts enable row level security;
 alter table public.site_settings enable row level security;
 alter table public.policy_pages enable row level security;
@@ -736,6 +1256,17 @@ on public.payment_transactions for all
 using (public.is_active_admin())
 with check (public.is_active_admin());
 
+drop policy if exists "Admins read newsletter subscribers" on public.newsletter_subscribers;
+create policy "Admins read newsletter subscribers"
+on public.newsletter_subscribers for select
+using (public.is_active_admin());
+
+drop policy if exists "Admins manage newsletter subscribers" on public.newsletter_subscribers;
+create policy "Admins manage newsletter subscribers"
+on public.newsletter_subscribers for all
+using (public.is_active_admin())
+with check (public.is_active_admin());
+
 drop policy if exists "Public can read active banners" on public.banners;
 create policy "Public can read active banners"
 on public.banners for select
@@ -751,6 +1282,39 @@ using (
 drop policy if exists "Admins manage banners" on public.banners;
 create policy "Admins manage banners"
 on public.banners for all
+using (public.is_active_admin())
+with check (public.is_active_admin());
+
+drop policy if exists "Public can read active homepage sections" on public.homepage_sections;
+create policy "Public can read active homepage sections"
+on public.homepage_sections for select
+using (is_active = true or public.is_active_admin());
+
+drop policy if exists "Admins manage homepage sections" on public.homepage_sections;
+create policy "Admins manage homepage sections"
+on public.homepage_sections for all
+using (public.is_active_admin())
+with check (public.is_active_admin());
+
+drop policy if exists "Public can read active homepage section items" on public.homepage_section_items;
+create policy "Public can read active homepage section items"
+on public.homepage_section_items for select
+using (
+  public.is_active_admin()
+  or (
+    is_active = true
+    and exists (
+      select 1
+      from public.homepage_sections
+      where homepage_sections.id = homepage_section_items.section_id
+        and homepage_sections.is_active = true
+    )
+  )
+);
+
+drop policy if exists "Admins manage homepage section items" on public.homepage_section_items;
+create policy "Admins manage homepage section items"
+on public.homepage_section_items for all
 using (public.is_active_admin())
 with check (public.is_active_admin());
 
@@ -1005,20 +1569,193 @@ insert into public.delivery_zones (
   sort_order
 )
 values
-  ('Colombo Central', 'Colombo', 'Colombo', array['00100', '00200', '00300', '00400', '00500'], 450.00, 50000.00, 1, 2, 1),
-  ('Greater Colombo', 'Colombo', 'Colombo', array['00600', '00700', '00800', '00900', '01000'], 650.00, 65000.00, 2, 3, 2)
+  ('Colombo Central', 'Colombo Central', 'Colombo', array['00100', '00200', '00300', '00400', '00500'], 450.00, 50000.00, 1, 2, 1),
+  ('Greater Colombo', 'Greater Colombo', 'Colombo', array['00600', '00700', '00800', '00900', '01000'], 650.00, 65000.00, 2, 3, 2)
 on conflict do nothing;
 
-insert into public.banners (title, subtitle, image_url, cta_label, cta_url, placement, sort_order)
-values
+insert into public.banners (
+  title,
+  subtitle,
+  eyebrow,
+  image_url,
+  cta_label,
+  cta_url,
+  secondary_cta_label,
+  secondary_cta_url,
+  placement,
+  sort_order
+)
+select
+  seed.title,
+  seed.subtitle,
+  seed.eyebrow,
+  seed.image_url,
+  seed.cta_label,
+  seed.cta_url,
+  seed.secondary_cta_label,
+  seed.secondary_cta_url,
+  seed.placement,
+  seed.sort_order
+from (
+  values
   (
-    'The Monochrome Edit',
-    'Evening silhouettes and precise tailoring for the modern formal wardrobe.',
+    'NO NOISE.
+JUST FORM.',
+    'Monochrome essentials. Zero compromise.',
+    'Xenon · SS26',
     'https://images.unsplash.com/photo-1509631179647-0177331693ae',
-    'Shop Collection',
-    '/collections/signature-collection',
+    'Shop Signature',
+    '/products?category=signature-collection',
+    'Shop Evening Wear',
+    '/products?category=evening-wear',
     'home_hero',
     1
+  ),
+  (
+    'THE MONOCHROME UNIFORM',
+    'Built for quiet confidence — tailored essentials for day and night.',
+    'Campaign',
+    'https://images.unsplash.com/photo-1483985988355-763728e1935b',
+    'Shop Now',
+    '/products',
+    null,
+    null,
+    'home_editorial',
+    1
+  )
+) as seed (
+  title,
+  subtitle,
+  eyebrow,
+  image_url,
+  cta_label,
+  cta_url,
+  secondary_cta_label,
+  secondary_cta_url,
+  placement,
+  sort_order
+)
+where not exists (
+  select 1
+  from public.banners
+  where banners.placement = seed.placement
+    and banners.title = seed.title
+);
+
+insert into public.homepage_sections (
+  section_key,
+  micro_label,
+  title,
+  body,
+  sort_order,
+  metadata
+)
+values
+  (
+    'home_occasions',
+    'STYLE CODES',
+    'SHOP BY OCCASION',
+    null,
+    1,
+    '{"defaultGender":"men"}'::jsonb
+  ),
+  (
+    'home_atelier',
+    'ATELIER',
+    'PRECISION IN RESTRAINT',
+    'Xenon is built around monochrome silhouettes, clean construction, and everyday refinement.',
+    2,
+    '{"values":["CONSIDERED SILHOUETTES","EVERYDAY LUXURY","MEN AND WOMEN EDITS"]}'::jsonb
+  )
+on conflict (section_key) do update
+set
+  micro_label = excluded.micro_label,
+  title = excluded.title,
+  body = excluded.body,
+  sort_order = excluded.sort_order,
+  metadata = excluded.metadata,
+  updated_at = now();
+
+insert into public.homepage_section_items (
+  section_id,
+  title,
+  subtitle,
+  image_url,
+  cta_label,
+  cta_url,
+  sort_order,
+  metadata
+)
+values
+  (
+    (select id from public.homepage_sections where section_key = 'home_occasions'),
+    'WORK',
+    'Sharp essentials for long days.',
+    'https://images.unsplash.com/photo-1529139574466-a303027c1d8b',
+    'Shop Now',
+    '/products?q=work',
+    1,
+    '{"gender":"all","objectPosition":"42% 18%"}'::jsonb
+  ),
+  (
+    (select id from public.homepage_sections where section_key = 'home_occasions'),
+    'EVENING',
+    'Quiet pieces after dark.',
+    'https://images.unsplash.com/photo-1496747611176-843222e1e57c',
+    'Shop Now',
+    '/products?q=evening',
+    2,
+    '{"gender":"all","objectPosition":"54% 16%"}'::jsonb
+  ),
+  (
+    (select id from public.homepage_sections where section_key = 'home_occasions'),
+    'WEEKEND',
+    'Relaxed silhouettes, refined.',
+    'https://images.unsplash.com/photo-1483985988355-763728e1935b',
+    'Shop Now',
+    '/products?q=weekend',
+    3,
+    '{"gender":"all","objectPosition":"62% 20%"}'::jsonb
+  ),
+  (
+    (select id from public.homepage_sections where section_key = 'home_occasions'),
+    'TRAVEL',
+    'Movement without noise.',
+    'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f',
+    'Shop Now',
+    '/products?q=travel',
+    4,
+    '{"gender":"all","objectPosition":"48% 22%"}'::jsonb
+  ),
+  (
+    (select id from public.homepage_sections where section_key = 'home_atelier'),
+    'Fabric / Detail',
+    null,
+    'https://images.unsplash.com/photo-1516762689617-e1cffcef479d',
+    null,
+    null,
+    1,
+    '{"layout":"detail","objectPosition":"42% 20%"}'::jsonb
+  ),
+  (
+    (select id from public.homepage_sections where section_key = 'home_atelier'),
+    'Model / Editorial',
+    null,
+    'https://images.unsplash.com/photo-1496747611176-843222e1e57c',
+    null,
+    null,
+    2,
+    '{"layout":"editorial","objectPosition":"58% 16%"}'::jsonb
+  ),
+  (
+    (select id from public.homepage_sections where section_key = 'home_atelier'),
+    'Product / Close-Up',
+    null,
+    'https://images.unsplash.com/photo-1523170335258-f5ed11844a49',
+    null,
+    null,
+    3,
+    '{"layout":"wide","objectPosition":"50% 28%"}'::jsonb
   )
 on conflict do nothing;
 
@@ -1057,7 +1794,7 @@ set
 insert into public.site_settings (key, value, description, is_public)
 values
   ('store_profile', '{"name":"Xenon","currency":"LKR","support_email":"hello@example.com","support_phone":"+94 77 000 0000"}', 'Public store identity and support details.', true),
-  ('payhere', '{"sandbox":true}', 'PayHere payment configuration flags. Store secrets only in environment variables.', false),
+  ('payhere', '{"enabled":false,"sandbox":true}', 'Future PayHere configuration placeholder. Store secrets only in environment variables when the gateway is implemented.', false),
   ('seo_defaults', '{"title":"Xenon","description":"Luxury black-and-white commerce."}', 'Default SEO values.', true)
 on conflict (key) do update
 set

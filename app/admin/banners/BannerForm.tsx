@@ -8,6 +8,12 @@ const initialState: BannerActionState = {
   message: "",
 };
 
+const placementOptions = [
+  { value: "home_hero", label: "Home hero" },
+  { value: "home_editorial", label: "Home editorial banner" },
+  { value: "home_campaign_secondary", label: "Home secondary campaign" },
+];
+
 export function BannerForm() {
   const [state, formAction, isPending] = useActionState(
     createBannerAction,
@@ -19,24 +25,56 @@ export function BannerForm() {
       <Field label="Title">
         <input className="admin-input" name="title" required />
       </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Placement">
+          <select className="admin-input" name="placement" defaultValue="home_hero">
+            {placementOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Eyebrow">
+          <input className="admin-input" name="eyebrow" placeholder="Xenon · SS26" />
+        </Field>
+      </div>
       <Field label="Subtitle">
         <textarea className="admin-input min-h-24 py-3" name="subtitle" />
       </Field>
-      <Field label="Image">
-        <input
-          className="admin-file"
-          name="image"
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          required
-        />
-      </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Button text">
+        <Field label="Desktop image">
+          <input
+            className="admin-file"
+            name="image"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            required
+          />
+        </Field>
+        <Field label="Mobile image optional">
+          <input
+            className="admin-file"
+            name="mobileImage"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+          />
+        </Field>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Primary button text">
           <input className="admin-input" name="buttonText" />
         </Field>
-        <Field label="Button link">
+        <Field label="Primary button link">
           <input className="admin-input" name="buttonLink" placeholder="/products" />
+        </Field>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Secondary button text">
+          <input className="admin-input" name="secondaryButtonText" />
+        </Field>
+        <Field label="Secondary button link">
+            <input className="admin-input" name="secondaryButtonLink" placeholder="/products?category=evening-wear" />
         </Field>
       </div>
       <Field label="Sort order">

@@ -1,5 +1,7 @@
 "use client";
 
+import { BrandLogo } from "@/components/BrandLogo";
+import Link from "next/link";
 import { useActionState } from "react";
 import { useSearchParams } from "next/navigation";
 import { signInAdminAction, type LoginActionState } from "./actions";
@@ -16,15 +18,9 @@ export function LoginForm() {
   );
 
   return (
-    <div className="w-full max-w-md border border-black bg-white p-8 shadow-[12px_12px_0_#0a0a0a]">
-      <div className="mb-8 border-b border-black pb-6">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.32em] text-neutral-600">
-          Admin access
-        </p>
-        <h1 className="text-3xl font-semibold tracking-normal text-black">
-          Sign in to Xenon
-        </h1>
-      </div>
+    <div className="w-full max-w-md bg-white p-7 sm:p-10">
+      <Link href="/" aria-label="Xenon home" className="mb-10 inline-block"><BrandLogo/></Link>
+      <div className="mb-8"><h1 className="text-3xl font-normal tracking-tight">Sign in to your workspace</h1><p className="mt-3 text-sm leading-6 text-neutral-600">Manage your catalog, website and orders.</p></div>
 
       <form className="space-y-5" action={formAction}>
         <input
@@ -45,7 +41,7 @@ export function LoginForm() {
             type="email"
             autoComplete="email"
             required
-            className="h-12 w-full border border-black bg-white px-4 text-sm text-black outline-none transition focus:shadow-[4px_4px_0_#0a0a0a]"
+            className="admin-input"
           />
         </div>
 
@@ -62,12 +58,12 @@ export function LoginForm() {
             type="password"
             autoComplete="current-password"
             required
-            className="h-12 w-full border border-black bg-white px-4 text-sm text-black outline-none transition focus:shadow-[4px_4px_0_#0a0a0a]"
+            className="admin-input"
           />
         </div>
 
         {state.message ? (
-          <p className="border border-black bg-neutral-100 px-4 py-3 text-sm text-black">
+          <p role="alert" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
             {state.message}
           </p>
         ) : null}
@@ -75,7 +71,7 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="h-12 w-full border border-black bg-black px-5 text-xs font-semibold uppercase tracking-[0.24em] text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-500"
+          className="admin-button w-full"
         >
           {isPending ? "Signing in" : "Sign in"}
         </button>

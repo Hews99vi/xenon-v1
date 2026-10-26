@@ -1,0 +1,8 @@
+{
+  "report": [
+    "Published size guide dialog and gallery zoom support Escape and focus return",
+    "Catalog, category, order, and content admin lists fit all five required widths; mobile tables scroll",
+    "Storefront, catalog, and product detail fit 390px with larger text"
+  ],
+  "errors": []
+}

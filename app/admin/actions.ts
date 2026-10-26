@@ -29,3 +29,10 @@ export async function getCurrentAdminSession() {
     adminProfile,
   };
 }
+
+export async function signOutAdmin() {
+  const supabase = await createServerSupabaseClient();
+  await supabase.auth.signOut();
+  const { redirect } = await import("next/navigation");
+  redirect("/admin/login");
+}

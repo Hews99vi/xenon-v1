@@ -4,7 +4,9 @@ import { AdminLayout } from "../../../AdminLayout";
 import { ProductForm } from "../../ProductForm";
 import { updateProductAction } from "../../actions";
 import type { ProductVariantInput } from "@/lib/adminSchemas";
-import { createServerSupabaseClient } from "@/lib/supabaseServer";
+import { requireAdmin } from "@/lib/content/server";
+import { readProductImages } from "@/lib/productImageQueries";
+import type { SavedProductImage } from "@/lib/productImages";
 
 type EditProductPageProps = {
   params: Promise<{
@@ -29,15 +31,20 @@ type ProductVariantRow = {
 
 export default async function EditProductPage({ params }: EditProductPageProps) {
   const { id } = await params;
-  const supabase = await createServerSupabaseClient();
+  const { db: supabase } = await requireAdmin();
+  let images: SavedProductImage[] = [];
+  let imageError = "";
+  try { images = await readProductImages(supabase, id); }
+  catch { imageError = "Product images could not be loaded. Reload this page before editing to protect the saved gallery."; }
+  const cleanup = await supabase.from("product_image_cleanup_jobs").select("asset_key", { count: "exact", head: true }).eq("state", "pending").lte("not_before", new Date().toISOString()).or(`product_id.eq.${id},product_id.is.null`);
 
-  const [{ data: categories }, { data: product }, { data: variants }] =
+  const [{ data: categories, error: categoriesError }, { data: product, error: productError }, { data: variants, error: variantsError }] =
     await Promise.all([
       supabase.from("categories").select("id, name").order("name"),
       supabase
         .from("products")
         .select(
-          "id, category_id, name, slug, description, short_description, base_price, sale_price, sku, status, is_featured, seo_title, seo_description",
+          "id, audience, category_id, name, slug, description, short_description, base_price, sale_price, sku, status, is_featured, seo_title, seo_description",
         )
         .eq("id", id)
         .maybeSingle(),
@@ -49,6 +56,9 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         .order("size", { ascending: true }),
     ]);
 
+  if (imageError || productError || categoriesError || variantsError) {
+    return <AdminLayout title="Edit product"><div className="admin-panel"><p role="alert">{imageError || "Product details could not be loaded. Reload this page before editing."}</p><Link className="admin-secondary mt-4" href={`/admin/products/${id}/edit`}>Reload product</Link></div></AdminLayout>;
+  }
   if (!product) {
     notFound();
   }
@@ -83,10 +93,14 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     >
       <div className="border border-black bg-white p-6">
         <ProductForm
+          productId={id}
+          initialImages={images}
+          initialCleanupPending={Boolean(cleanup.count)}
           categories={(categories || []) as CategoryOption[]}
           action={action}
           submitLabel="Update product"
           defaultValues={{
+            audience: product.audience || "",
             name: product.name,
             slug: product.slug,
             description: product.description || "",

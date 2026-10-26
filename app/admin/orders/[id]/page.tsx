@@ -162,7 +162,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             </div>
           </section>
 
-          <section className="overflow-hidden border border-black bg-white">
+          <section className="overflow-x-auto border border-black bg-white">
             <div className="border-b border-black p-5">
               <h2 className="text-sm font-semibold uppercase tracking-[0.24em]">
                 Items

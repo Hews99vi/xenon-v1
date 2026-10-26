@@ -1,68 +1,14 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
-
-type AdminLayoutProps = {
-  eyebrow?: string;
-  title: string;
-  action?: ReactNode;
-  children: ReactNode;
-};
-
-const navItems = [
-  { href: "/admin/dashboard", label: "Dashboard" },
-  { href: "/admin/categories", label: "Categories" },
-  { href: "/admin/products", label: "Products" },
-  { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/promotions", label: "Promotions" },
-  { href: "/admin/delivery-zones", label: "Delivery" },
-  { href: "/admin/banners", label: "Banners" },
-  { href: "/admin/settings", label: "Settings" },
-  { href: "/admin/blog", label: "Blog" },
-  { href: "/admin/policies", label: "Policies" },
-];
-
-export function AdminLayout({
-  eyebrow = "Xenon admin",
-  title,
-  action,
-  children,
-}: AdminLayoutProps) {
-  return (
-    <section className="bg-background">
-      <div className="mx-auto grid min-h-[calc(100vh-10rem)] w-full max-w-7xl gap-8 px-6 py-10 sm:px-8 lg:grid-cols-[16rem_1fr]">
-        <aside className="border border-black bg-white p-5 lg:sticky lg:top-6 lg:h-fit">
-          <p className="mb-6 border-b border-black pb-4 text-xs font-semibold uppercase tracking-[0.3em]">
-            Admin
-          </p>
-          <nav className="space-y-2" aria-label="Admin modules">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="block border border-transparent px-3 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-700 transition hover:border-black hover:text-black"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </aside>
-
-        <div>
-          <div className="mb-8 flex flex-col gap-5 border-b border-black pb-6 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.32em] text-neutral-600">
-                {eyebrow}
-              </p>
-              <h1 className="text-4xl font-semibold tracking-normal text-black">
-                {title}
-              </h1>
-            </div>
-            {action}
-          </div>
-
-          {children}
-        </div>
-      </div>
-    </section>
-  );
+import type {ReactNode} from "react";
+import {ExternalLink,LogOut} from "lucide-react";
+import {BrandLogo} from "@/components/BrandLogo";
+import {AdminNavigation} from "@/components/admin/AdminNavigation";
+import {AdminMenu} from "@/components/admin/AdminMenu";
+import {signOutAdmin} from "./actions";
+export function AdminLayout({title,action,children}:{eyebrow?:string;title:string;action?:ReactNode;children:ReactNode}){
+ return <div className="admin-shell admin-workspace">
+  <a href="#admin-main" className="skip-link">Skip to workspace</a>
+  <header className="admin-topbar"><div className="flex min-w-0 items-center gap-3"><AdminMenu/><Link href="/admin/dashboard" aria-label="Xenon admin home"><BrandLogo/></Link><span className="hidden border-l border-neutral-300 pl-5 text-xs text-neutral-600 sm:inline">Workspace</span></div><div className="flex items-center gap-3 sm:gap-6"><Link href="/" target="_blank" className="inline-flex min-h-11 items-center gap-2 text-xs sm:text-sm">View store<ExternalLink size={14} strokeWidth={1.5}/></Link><form action={signOutAdmin}><button className="inline-flex min-h-11 items-center gap-2 text-xs sm:text-sm" type="submit"><LogOut size={16} strokeWidth={1.5}/><span className="hidden sm:inline">Sign out</span><span className="sr-only sm:hidden">Sign out</span></button></form></div></header>
+  <div className="grid lg:grid-cols-[240px_minmax(0,1fr)]"><aside className="hidden min-h-[calc(100vh-76px)] border-r border-neutral-200 bg-white p-5 lg:block"><div className="sticky top-6"><AdminNavigation/></div></aside><main id="admin-main" className="admin-main"><div className="admin-page-heading"><h1>{title}</h1>{action}</div>{children}</main></div>
+ </div>;
 }

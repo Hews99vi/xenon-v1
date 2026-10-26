@@ -1,0 +1,14 @@
+{
+  "report": [
+    "Draft isolation; hero title, blank supporting copy, image alt/crop, and secondary CTA render accurately",
+    "Desktop/mobile preview, mobile image, and atomic publication verified",
+    "Hidden hero does not revive fallback campaign content",
+    "Manual product selection works; deleting the last selection leaves the row empty",
+    "Manual category selection stays empty after its last item is removed",
+    "Editable announcement renders as a static strip",
+    "Footer brand text and newsletter heading/body render from the draft",
+    "History restoration creates a draft, previews, and republishes the earlier content",
+    "Admin editor has no page-wide overflow at all five required widths"
+  ],
+  "errors": []
+}

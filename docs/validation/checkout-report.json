@@ -1,0 +1,10 @@
+{
+  "report": [
+    "Touch quick-add requires a real available variant",
+    "Cart persists across reloads; Escape returns focus",
+    "Checkout refreshes changed variant price and caps quantity at live stock",
+    "Mobile expandable summary precedes delivery form; district and promotion update totals",
+    "COD order stores current totals, reduces stock atomically, clears cart, and displays confirmation"
+  ],
+  "errors": []
+}

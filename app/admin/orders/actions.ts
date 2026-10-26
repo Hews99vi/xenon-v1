@@ -65,6 +65,30 @@ export async function updateOrderStatusesAction(
     };
   }
 
+  if (parsed.data.orderStatus === "cancelled") {
+    const { error } = await supabase.rpc("release_order_stock", {
+      p_order_id: parsed.data.orderId,
+      p_cancel_order: true,
+      p_payment_status: parsed.data.paymentStatus,
+    });
+
+    if (error) {
+      logActionError("releaseOrderStockAction", error);
+      return {
+        ok: false,
+        message: getReleaseStockErrorMessage(error.message),
+      };
+    }
+
+    revalidatePath("/admin/orders");
+    revalidatePath(`/admin/orders/${parsed.data.orderId}`);
+
+    return {
+      ok: true,
+      message: "Order cancelled and stock release checked.",
+    };
+  }
+
   const { error } = await supabase
     .from("orders")
     .update({
@@ -101,4 +125,24 @@ const allowedOrderTransitions: Record<OrderStatus, OrderStatus[]> = {
 
 function canTransitionOrderStatus(from: OrderStatus, to: OrderStatus) {
   return allowedOrderTransitions[from]?.includes(to) || false;
+}
+
+function getReleaseStockErrorMessage(message?: string) {
+  if (!message) {
+    return "Could not cancel order and release stock.";
+  }
+
+  if (message.includes("order_stock_release_not_allowed")) {
+    return "Stock can only be released for pending, confirmed, processing, or already-cancelled orders.";
+  }
+
+  if (message.includes("order_not_found")) {
+    return "Order was not found.";
+  }
+
+  if (message.includes("not_authorized")) {
+    return "You are not authorized to release order stock.";
+  }
+
+  return getActionErrorMessage("cancel order and release stock");
 }

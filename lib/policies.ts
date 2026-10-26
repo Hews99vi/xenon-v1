@@ -1,30 +1,30 @@
 import DOMPurify from "isomorphic-dompurify";
 import { marked } from "marked";
-import { supabasePublic } from "./supabasePublic";
+import { getPageContent, readDocument } from "./content/server";
 
 export type PublicPolicyPage = {
   title: string;
   slug: string;
   content: string;
+  seoTitle: string;
+  seoDescription: string;
   updatedAt: string;
 };
 
 export async function getPolicyBySlug(slug: string) {
-  const { data } = await supabasePublic
-    .from("policy_pages")
-    .select("title, slug, content, updated_at")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (!data) {
-    return null;
-  }
-
+  const page = await getPageContent("page", slug);
+  if (!page) return null;
+  const result = await readDocument(`page:${slug}`);
   return {
-    title: data.title,
-    slug: data.slug,
-    content: data.content,
-    updatedAt: data.updated_at,
+    title: page.title,
+    slug,
+    content: page.body,
+    seoTitle: page.seoTitle,
+    seoDescription: page.seoDescription,
+    updatedAt:
+      ("publishedAt" in result && result.publishedAt) ||
+      result.document?.updated_at ||
+      new Date().toISOString(),
   } satisfies PublicPolicyPage;
 }
 

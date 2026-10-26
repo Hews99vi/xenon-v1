@@ -1,0 +1,105 @@
+[
+  {
+    "page": "home",
+    "status": 200,
+    "width": 360,
+    "scrollWidth": 360,
+    "heading": "Define Your Style",
+    "cards": [
+      151,
+      151,
+      151,
+      151
+    ],
+    "images": []
+  },
+  {
+    "page": "home",
+    "status": 200,
+    "width": 390,
+    "scrollWidth": 390,
+    "heading": "Define Your Style",
+    "cards": [
+      165,
+      165,
+      165,
+      165
+    ],
+    "images": []
+  },
+  {
+    "page": "home",
+    "status": 200,
+    "width": 768,
+    "scrollWidth": 768,
+    "heading": "Define Your Style",
+    "cards": [
+      237,
+      237,
+      237,
+      237
+    ],
+    "images": []
+  },
+  {
+    "page": "home",
+    "status": 200,
+    "width": 1024,
+    "scrollWidth": 1024,
+    "heading": "Define Your Style",
+    "cards": [
+      239,
+      239,
+      239,
+      239
+    ],
+    "images": []
+  },
+  {
+    "page": "home",
+    "status": 200,
+    "width": 1440,
+    "scrollWidth": 1440,
+    "heading": "Define Your Style",
+    "cards": [
+      343,
+      343,
+      343,
+      343
+    ],
+    "images": []
+  },
+  {
+    "page": "products",
+    "title": "The collection",
+    "overflow": false
+  },
+  {
+    "searchEscape": true,
+    "searchFocus": true
+  },
+  {
+    "filterEscape": true
+  },
+  {
+    "menuEscape": true
+  },
+  {
+    "page": "/products/unisex-xenon-button-up-jersey",
+    "status": 200,
+    "title": "Unisex Xenon Button-Up Jersey",
+    "overflow": false
+  },
+  {
+    "page": "admin login",
+    "storefrontHeader": 0,
+    "footer": 0,
+    "overflow": false
+  },
+  {
+    "anonymousPreviewStatus": 401
+  },
+  {
+    "errors": []
+  }
+]

@@ -1,3 +1,6 @@
+import { listContent } from "@/lib/content/server";
+import { contentPath } from "@/lib/content/schema";
+import { supabasePublic } from "@/lib/supabasePublic";
 import { getPublishedBlogSlugs } from "@/lib/blog";
 import { absoluteUrl } from "@/lib/seo";
 import { getAllCategorySlugs, getAllProductSlugs } from "@/lib/storefront";
@@ -5,19 +8,18 @@ import { getAllCategorySlugs, getAllProductSlugs } from "@/lib/storefront";
 export const revalidate = 300;
 
 export async function GET() {
-  const [productSlugs, categorySlugs, blogSlugs] = await Promise.all([
+  const [productSlugs, categorySlugs, blogSlugs, pageDocuments] = await Promise.all([
     getAllProductSlugs(),
     getAllCategorySlugs(),
     getPublishedBlogSlugs(),
+    listContent("page"),
   ]);
+  const pageSlugs=pageDocuments===null?(await supabasePublic.from("policy_pages").select("slug").eq("status","published")).data?.map(p=>p.slug)||[]:pageDocuments.filter(d=>d.published_revision_id).map(d=>d.slug);
   const urls = [
     { loc: absoluteUrl("/"), priority: "1.0" },
     { loc: absoluteUrl("/products"), priority: "0.9" },
     { loc: absoluteUrl("/blog"), priority: "0.7" },
-    { loc: absoluteUrl("/return-policy"), priority: "0.3" },
-    { loc: absoluteUrl("/shipping-policy"), priority: "0.3" },
-    { loc: absoluteUrl("/privacy-policy"), priority: "0.3" },
-    { loc: absoluteUrl("/terms"), priority: "0.3" },
+    ...pageSlugs.map(slug=>({loc:absoluteUrl(contentPath("page",slug)),priority:"0.3"})),
     ...categorySlugs.map((slug) => ({
       loc: absoluteUrl(`/categories/${slug}`),
       priority: "0.8",

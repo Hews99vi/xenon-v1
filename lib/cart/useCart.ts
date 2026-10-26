@@ -1,19 +1,9 @@
 "use client";
 
 import { create } from "zustand";
+import type { CartItem } from "./types";
 
-export type CartItem = {
-  productId: string;
-  variantId: string;
-  name: string;
-  slug: string;
-  image: string | null;
-  color: string | null;
-  size: string | null;
-  price: number;
-  quantity: number;
-  stockQuantity: number;
-};
+export type { CartItem };
 
 type CartState = {
   items: CartItem[];
@@ -21,6 +11,7 @@ type CartState = {
   addItem: (item: CartItem) => void;
   removeItem: (variantId: string) => void;
   updateQuantity: (variantId: string, newQty: number) => void;
+  replaceItems: (items: CartItem[]) => void;
   clearCart: () => void;
   hydrateCart: () => void;
 };
@@ -42,7 +33,27 @@ function readCart() {
 
   try {
     const stored = window.localStorage.getItem(storageKey);
-    return stored ? (JSON.parse(stored) as CartItem[]) : [];
+    const parsed = stored ? JSON.parse(stored) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is CartItem =>
+      Boolean(
+        item &&
+        typeof item === "object" &&
+        typeof item.productId === "string" &&
+        typeof item.variantId === "string" &&
+        typeof item.name === "string" &&
+        typeof item.slug === "string" &&
+        [item.image, item.color, item.size].every(
+          (value) => value == null || typeof value === "string",
+        ) &&
+        Number.isFinite(item.price) &&
+        item.price >= 0 &&
+        Number.isInteger(item.quantity) &&
+        item.quantity > 0 &&
+        Number.isInteger(item.stockQuantity) &&
+        item.stockQuantity >= 0,
+      ),
+    );
   } catch {
     return [];
   }
@@ -53,7 +64,11 @@ function writeCart(items: CartItem[]) {
     return;
   }
 
-  window.localStorage.setItem(storageKey, JSON.stringify(items));
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(items));
+  } catch {
+    /* Keep the current cart usable when browser storage is unavailable. */
+  }
 }
 
 export const useCart = create<CartState>((set, get) => ({
@@ -97,7 +112,9 @@ export const useCart = create<CartState>((set, get) => ({
     writeCart(nextItems);
   },
   removeItem: (variantId) => {
-    const nextItems = get().items.filter((item) => item.variantId !== variantId);
+    const nextItems = get().items.filter(
+      (item) => item.variantId !== variantId,
+    );
     set({ items: nextItems });
     writeCart(nextItems);
   },
@@ -110,6 +127,15 @@ export const useCart = create<CartState>((set, get) => ({
           }
         : item,
     );
+
+    set({ items: nextItems });
+    writeCart(nextItems);
+  },
+  replaceItems: (items) => {
+    const nextItems = items.map((item) => ({
+      ...item,
+      quantity: clampQuantity(item.quantity, item.stockQuantity),
+    }));
 
     set({ items: nextItems });
     writeCart(nextItems);

@@ -17,6 +17,8 @@ export default async function NewProductPage() {
     .eq("is_active", true)
     .order("name");
 
+  const cleanup = await supabase.from("product_image_cleanup_jobs").select("asset_key", { count: "exact", head: true }).eq("state", "pending").lte("not_before", new Date().toISOString()).is("product_id", null);
+
   return (
     <AdminLayout
       title="New product"
@@ -37,6 +39,7 @@ export default async function NewProductPage() {
           </p>)
         ) : categories?.length ? (
           <ProductForm
+            initialCleanupPending={Boolean(cleanup.count)}
             categories={(categories || []) as CategoryOption[]}
             action={createProductAction}
           />

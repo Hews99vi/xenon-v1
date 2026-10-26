@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminField as Field } from "@/components/admin/AdminField";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useActionState, useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -42,6 +43,7 @@ export function CategoryForm({
   } = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
+      audience: defaultValues?.audience || "",
       name: defaultValues?.name || "",
       slug: defaultValues?.slug || "",
       description: defaultValues?.description || "",
@@ -61,6 +63,14 @@ export function CategoryForm({
   return (
     <form action={formAction} className="space-y-6">
       <div className="grid gap-5 sm:grid-cols-2">
+        <Field label="Audience">
+          <select className="admin-input" {...register("audience")}>
+            <option value="">Unassigned — review required</option>
+            <option value="women">Women</option>
+            <option value="men">Men</option>
+            <option value="unisex">Unisex</option>
+          </select>
+        </Field>
         <Field label="Name" error={errors.name?.message}>
           <input className="admin-input" {...register("name")} />
         </Field>
@@ -76,19 +86,27 @@ export function CategoryForm({
       </div>
 
       <Field label="Description" error={errors.description?.message}>
-        <textarea className="admin-input min-h-32 py-3" {...register("description")} />
+        <textarea
+          className="admin-input min-h-32 py-3"
+          {...register("description")}
+        />
       </Field>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Image" hint="PNG, JPG, or WebP stored in Supabase Storage.">
+        <Field
+          label="Image"
+          hint="PNG, JPG, or WebP stored in Supabase Storage."
+        >
           <input
             name="image"
             type="file"
-            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            accept="image/png,image/jpeg,image/webp"
             className="admin-file"
           />
           {defaultValues?.imageUrl ? (
-            <p className="mt-2 text-xs text-neutral-600">Current image is saved.</p>
+            <p className="mt-2 text-xs text-neutral-600">
+              Current image is saved.
+            </p>
           ) : null}
         </Field>
 
@@ -127,28 +145,5 @@ export function CategoryForm({
         {isPending ? "Saving" : submitLabel}
       </button>
     </form>
-  );
-}
-
-function Field({
-  label,
-  error,
-  hint,
-  children,
-}: {
-  label: string;
-  error?: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-neutral-700">
-        {label}
-      </span>
-      {children}
-      {hint ? <span className="mt-2 block text-xs text-neutral-500">{hint}</span> : null}
-      {error ? <span className="mt-2 block text-xs text-red-700">{error}</span> : null}
-    </label>
   );
 }

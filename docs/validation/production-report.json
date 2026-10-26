@@ -1,0 +1,40 @@
+{
+  "report": [
+    {
+      "route": "/",
+      "status": 200,
+      "title": "DEFINE YOUR STYLE"
+    },
+    {
+      "route": "/products",
+      "status": 200,
+      "title": "The collection"
+    },
+    {
+      "route": "/products/unisex-xenon-button-up-jersey",
+      "status": 200,
+      "title": "UNISEX XENON BUTTON-UP JERSEY"
+    },
+    {
+      "route": "/categories/signature-collection",
+      "status": 200,
+      "title": "Signature Collection"
+    },
+    {
+      "route": "/blog",
+      "status": 200,
+      "title": "BLOG"
+    },
+    {
+      "route": "/return-policy",
+      "status": 200,
+      "title": "Returns Policy"
+    },
+    {
+      "route": "/admin/login",
+      "status": 200,
+      "title": "Sign in to Xenon"
+    }
+  ],
+  "errors": []
+}

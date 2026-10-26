@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const categorySchema = z.object({
+  audience: z.enum(["women", "men", "unisex", ""]).optional(),
   name: z.string().trim().min(2, "Name must be at least 2 characters."),
   slug: z
     .string()
@@ -21,7 +22,8 @@ export const productStatusSchema = z.enum([
 
 export const productSchema = z
   .object({
-    name: z.string().trim().min(2, "Name must be at least 2 characters."),
+    audience: z.enum(["women", "men", "unisex", ""]).optional(),
+  name: z.string().trim().min(2, "Name must be at least 2 characters."),
     slug: z
       .string()
       .trim()
@@ -30,7 +32,7 @@ export const productSchema = z
     description: z.string().trim().optional(),
     shortDescription: z.string().trim().optional(),
     basePrice: z.coerce.number().min(0, "Price cannot be negative."),
-    salePrice: z.coerce.number().min(0).optional().or(z.literal("")),
+    salePrice: z.literal("").or(z.coerce.number().min(0)).optional(),
     sku: z.string().trim().min(2, "SKU is required."),
     status: productStatusSchema,
     isFeatured: z.coerce.boolean(),
@@ -54,7 +56,7 @@ export const productVariantSchema = z.object({
   color: z.string().trim().optional(),
   size: z.string().trim().optional(),
   sku: z.string().trim().min(2, "Variant SKU is required."),
-  price: z.coerce.number().min(0, "Variant price cannot be negative.").optional().or(z.literal("")),
+  price: z.literal("").or(z.coerce.number().min(0, "Variant price cannot be negative.")).optional(),
   stockQuantity: z.coerce
     .number()
     .int("Stock must be a whole number.")

@@ -100,7 +100,7 @@ export default async function AdminOrdersPage({ searchParams }: OrdersPageProps)
           Could not load orders.
         </p>)
       ) : (
-        <div className="overflow-hidden border border-black bg-white">
+        <div className="overflow-x-auto border border-black bg-white">
           <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="border-b border-black bg-neutral-100 text-xs uppercase tracking-[0.2em]">
               <tr>

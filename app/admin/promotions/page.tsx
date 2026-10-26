@@ -5,6 +5,7 @@ import {
   deletePromotionAction,
   togglePromotionAction,
 } from "./actions";
+import { MutationForm } from "@/components/admin/MutationForm";
 import { PromotionForm } from "./PromotionForm";
 
 type PromoCode = {
@@ -33,7 +34,7 @@ export default async function PromotionsPage() {
   return (
     <AdminLayout title="Promotions">
       <div className="grid gap-8 xl:grid-cols-[1fr_24rem]">
-        <section className="overflow-hidden border border-black bg-white">
+        <section className="overflow-x-auto border border-black bg-white">
           <div className="border-b border-black p-5">
             <h2 className="text-sm font-semibold uppercase tracking-[0.24em]">
               Promo codes
@@ -89,23 +90,23 @@ export default async function PromotionsPage() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex justify-end gap-2">
-                          <form action={togglePromotionAction}>
+                          <MutationForm action={togglePromotionAction}>
                             <input type="hidden" name="id" value={promo.id} />
                             <input
                               type="hidden"
                               name="isActive"
                               value={promo.is_active ? "false" : "true"}
                             />
-                            <button className="border border-black px-3 py-2 text-xs uppercase tracking-[0.16em]">
+                            <button className="admin-secondary !px-3">
                               {promo.is_active ? "Disable" : "Enable"}
                             </button>
-                          </form>
-                          <form action={deletePromotionAction}>
+                          </MutationForm>
+                          <MutationForm action={deletePromotionAction} confirmation={`Delete promotion ${promo.code}? This cannot be undone.`}>
                             <input type="hidden" name="id" value={promo.id} />
-                            <button className="border border-black bg-black px-3 py-2 text-xs uppercase tracking-[0.16em] text-white">
+                            <button className="admin-secondary !px-3 !text-red-800">
                               Delete
                             </button>
-                          </form>
+                          </MutationForm>
                         </div>
                       </td>
                     </tr>

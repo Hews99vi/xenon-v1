@@ -1,5 +1,7 @@
--- Extra setup for the admin category/product modules.
--- Run after supabase/schema.sql if your database already exists.
+-- Compatibility/upgrade setup for existing databases.
+-- Fresh databases receive this setup from supabase/schema.sql. Run this file
+-- after supabase/schema.sql when upgrading an existing database; it is
+-- intentionally idempotent and also re-applies the Storage configuration.
 
 alter table public.products
 drop constraint if exists products_status_check;

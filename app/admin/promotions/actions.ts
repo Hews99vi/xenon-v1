@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getActionErrorMessage, logActionError } from "@/lib/actionErrors";
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
+import { requireAdmin } from "@/lib/content/server";
 
 const promoCodeSchema = z
   .object({
@@ -133,23 +134,35 @@ export async function togglePromotionAction(formData: FormData) {
   const id = String(formData.get("id") || "");
   const isActive = toBoolean(formData.get("isActive"));
 
-  if (!id) {
-    return;
+  if (!z.string().uuid().safeParse(id).success)
+    return { ok: false, message: "Choose a valid promotion." };
+  try {
+    const { db } = await requireAdmin();
+    const { data, error } = await db.from("promo_codes").update({ is_active: isActive }).eq("id", id).select("id").maybeSingle();
+    if (error) throw error;
+    if (!data) return { ok: false, message: "This promotion is no longer available. Refresh the page." };
+    revalidatePath("/admin/promotions");
+    return { ok: true, message: isActive ? "Promotion enabled." : "Promotion disabled." };
+  } catch (error) {
+    logActionError("togglePromotionAction", error);
+    return { ok: false, message: "Could not update the promotion. Check your session and try again." };
   }
-
-  const supabase = await createServerSupabaseClient();
-  await supabase.from("promo_codes").update({ is_active: isActive }).eq("id", id);
-  revalidatePath("/admin/promotions");
 }
 
 export async function deletePromotionAction(formData: FormData) {
   const id = String(formData.get("id") || "");
 
-  if (!id) {
-    return;
+  if (!z.string().uuid().safeParse(id).success)
+    return { ok: false, message: "Choose a valid promotion." };
+  try {
+    const { db } = await requireAdmin();
+    const { data, error } = await db.from("promo_codes").delete().eq("id", id).select("id").maybeSingle();
+    if (error) throw error;
+    if (!data) return { ok: false, message: "This promotion is no longer available. Refresh the page." };
+    revalidatePath("/admin/promotions");
+    return { ok: true, message: "Promotion deleted." };
+  } catch (error) {
+    logActionError("deletePromotionAction", error);
+    return { ok: false, message: "Could not delete the promotion. Check your session and try again." };
   }
-
-  const supabase = await createServerSupabaseClient();
-  await supabase.from("promo_codes").delete().eq("id", id);
-  revalidatePath("/admin/promotions");
 }

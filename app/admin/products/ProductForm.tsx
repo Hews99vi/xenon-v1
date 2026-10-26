@@ -1,7 +1,8 @@
 "use client";
 
+import { AdminField as Field } from "@/components/admin/AdminField";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { type FormEvent, useActionState, useEffect, useState } from "react";
+import { type FormEvent, startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import {
   type ProductInput,
@@ -10,7 +11,10 @@ import {
   productSchema,
   slugify,
 } from "@/lib/adminSchemas";
-import type { ProductActionState } from "./actions";
+import { reloadProductImagesAction, retryProductImageCleanupAction, type ProductActionState } from "./actions";
+import { ProductImageManager, useProductGallery } from "./ProductImageManager";
+import type { SavedProductImage } from "@/lib/productImages";
+import { useRouter } from "next/navigation";
 
 type CategoryOption = {
   id: string;
@@ -19,6 +23,9 @@ type CategoryOption = {
 
 type ProductFormProps = {
   categories: CategoryOption[];
+  initialImages?: SavedProductImage[];
+  productId?: string;
+  initialCleanupPending?: boolean;
   action: (
     prevState: ProductActionState,
     formData: FormData,
@@ -50,10 +57,35 @@ export function ProductForm({
   action,
   submitLabel = "Create product",
   defaultValues,
+  initialImages = [],
+  productId,
+  initialCleanupPending = false,
 }: ProductFormProps) {
-  const [state, formAction, isPending] = useActionState(action, defaultState);
+  const router = useRouter();
+  const gallery = useProductGallery(initialImages);
+  const inFlight = useRef(false);
+  const [cleanupPending, setCleanupPending] = useState(initialCleanupPending);
+  const [imageTaskPending, setImageTaskPending] = useState(false);
+  const [imageTaskMessage, setImageTaskMessage] = useState("");
+  const [state, formAction, isPending] = useActionState(async (previous: ProductActionState, data: FormData) => {
+    data.set("imageManifest", JSON.stringify(gallery.manifest));
+    data.set("imageSnapshot", JSON.stringify(gallery.snapshot));
+    gallery.files.forEach(({ key, file }) => data.set(`image-file-${key}`, file));
+    try {
+      const result = await action(previous, data);
+      if (result.cleanupPending !== undefined) setCleanupPending(result.cleanupPending);
+      if (result.ok && result.images) {
+        gallery.acceptSaved(result.images);
+        setCleanupPending(Boolean(result.cleanupPending));
+        setImageTaskMessage("");
+        if (!productId && result.productId) router.replace(`/admin/products/${result.productId}/edit`);
+      }
+      return result;
+    } catch {
+      return { ok: false, code: "unknown" as const, message: "The save status could not be confirmed. Your edits are kept. Reload the product before trying again." };
+    } finally { inFlight.current = false; }
+  }, defaultState);
   const [slugEdited, setSlugEdited] = useState(Boolean(defaultValues?.slug));
-  const [imageCount, setImageCount] = useState(0);
   const [variants, setVariants] = useState<ProductVariantInput[]>(
     defaultValues?.variants?.length
       ? defaultValues.variants
@@ -68,6 +100,7 @@ export function ProductForm({
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
+      audience: defaultValues?.audience || "",
       name: defaultValues?.name || "",
       slug: defaultValues?.slug || "",
       description: defaultValues?.description || "",
@@ -127,6 +160,8 @@ export function ProductForm({
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (inFlight.current || gallery.isPreparing() || imageTaskPending) return;
     if (!variants.length) {
       event.preventDefault();
       setVariantError("At least one variant is required.");
@@ -149,12 +184,47 @@ export function ProductForm({
     }
 
     setVariantError("");
+    const data = new FormData(event.currentTarget);
+    inFlight.current = true;
+    startTransition(() => formAction(data));
+  }
+
+  async function reloadImages() {
+    if (!productId || (gallery.dirty && !window.confirm("Reload images? Unsaved image changes will be discarded. Other product fields are kept."))) return;
+    setImageTaskPending(true);
+    try {
+      const result = await reloadProductImagesAction(productId);
+      if (result.ok) gallery.acceptSaved(result.images);
+      setImageTaskMessage(result.message);
+    } catch { setImageTaskMessage("Images could not be reloaded. Try again."); }
+    finally { setImageTaskPending(false); }
+  }
+  async function retryCleanup() {
+    setImageTaskPending(true);
+    try {
+      const result = await retryProductImageCleanupAction(productId || state.productId || null);
+      setCleanupPending(result.pending); setImageTaskMessage(result.message);
+    } catch { setImageTaskMessage("Cleanup could not be completed. Try again."); }
+    finally { setImageTaskPending(false); }
   }
 
   return (
-    <form action={formAction} className="space-y-6" onSubmit={handleSubmit}>
-      <input name="variantsJson" type="hidden" value={JSON.stringify(variants)} />
+    <form method="post" className="catalog-form space-y-6" onSubmit={handleSubmit} aria-busy={isPending || imageTaskPending || gallery.preparing}>
+      <input
+        name="variantsJson"
+        type="hidden"
+        value={JSON.stringify(variants)}
+      />
+      <fieldset disabled={isPending || imageTaskPending || gallery.preparing} className="space-y-5"><legend>Product information</legend>
       <div className="grid gap-5 sm:grid-cols-2">
+        <Field label="Audience">
+          <select className="admin-input" {...register("audience")}>
+            <option value="">Unassigned — review required</option>
+            <option value="women">Women</option>
+            <option value="men">Men</option>
+            <option value="unisex">Unisex</option>
+          </select>
+        </Field>
         <Field label="Name" error={errors.name?.message}>
           <input className="admin-input" {...register("name")} />
         </Field>
@@ -190,9 +260,14 @@ export function ProductForm({
       </Field>
 
       <Field label="Description" error={errors.description?.message}>
-        <textarea className="admin-input min-h-36 py-3" {...register("description")} />
+        <textarea
+          className="admin-input min-h-36 py-3"
+          {...register("description")}
+        />
       </Field>
 
+      </fieldset>
+      <fieldset disabled={isPending || imageTaskPending || gallery.preparing} className="space-y-5"><legend>Pricing and visibility</legend>
       <div className="grid gap-5 sm:grid-cols-3">
         <Field label="Price" error={errors.basePrice?.message}>
           <input
@@ -224,25 +299,15 @@ export function ProductForm({
         </Field>
       </div>
 
-      <Field
-        label="Product images"
-        hint={`${imageCount}/5 selected. New uploads are appended. First image is primary.`}
-      >
-        <input
-          name="images"
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          multiple
-          className="admin-file"
-          onChange={(event) => setImageCount(event.target.files?.length || 0)}
-        />
-        {imageCount > 5 ? (
-          <span className="mt-2 block text-xs text-red-700">
-            Select no more than 5 images.
-          </span>
-        ) : null}
-      </Field>
+      </fieldset>
+      <fieldset disabled={isPending || imageTaskPending || gallery.preparing} className="space-y-5"><legend>Photography</legend>
+      <ProductImageManager gallery={gallery}/>
+      {productId && (state.code === "conflict" || state.code === "unknown") && <button type="button" className="admin-secondary" onClick={() => void reloadImages()} disabled={imageTaskPending}>Reload images</button>}
+      {cleanupPending && <div className="border-t pt-4"><p className="text-sm text-neutral-600">Some unused files could not be removed. Retry cleanup when the connection is available.</p><button type="button" className="admin-secondary mt-3" onClick={() => void retryCleanup()} disabled={imageTaskPending}>Retry cleanup</button></div>}
+      {imageTaskMessage && <p role="status" className="text-sm">{imageTaskMessage}</p>}
 
+      </fieldset>
+      <fieldset disabled={isPending || imageTaskPending || gallery.preparing} className="space-y-5"><legend>Search and merchandising</legend>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="SEO title" error={errors.seoTitle?.message}>
           <input className="admin-input" {...register("seoTitle")} />
@@ -262,12 +327,11 @@ export function ProductForm({
         Featured product
       </label>
 
-      <section className="border border-black bg-neutral-50 p-4">
+      </fieldset>
+      <fieldset disabled={isPending || imageTaskPending || gallery.preparing} className="space-y-5"><legend>Variants and stock</legend>
+      <section>
         <div className="mb-4 flex flex-col gap-3 border-b border-black pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-sm font-semibold uppercase tracking-[0.24em]">
-              Variants
-            </h2>
             <p className="mt-2 text-sm text-neutral-600">
               Empty size values are saved as Free Size. Empty prices use the
               product price ({Number(basePrice || 0).toLocaleString()}).
@@ -285,7 +349,7 @@ export function ProductForm({
         <div className="space-y-4">
           {variants.map((variant, index) => (
             <div
-              className="grid gap-4 border border-neutral-300 bg-white p-4 lg:grid-cols-[1fr_1fr_1.2fr_1fr_1fr_auto_auto]"
+              className="grid gap-4 border-b border-neutral-200 py-5 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1.2fr_1fr_1fr_auto_auto]"
               key={`${variant.id || "new"}-${index}`}
             >
               <VariantField label="Color">
@@ -376,9 +440,11 @@ export function ProductForm({
           </p>
         ) : null}
       </section>
+      </fieldset>
 
       {state.message ? (
         <p
+          role="status"
           className={`border px-4 py-3 text-sm ${
             state.ok
               ? "border-black bg-white text-black"
@@ -389,49 +455,15 @@ export function ProductForm({
         </p>
       ) : null}
 
-      <button className="admin-button" type="submit" disabled={isPending || imageCount > 5}>
+      <button
+        className="admin-button"
+        type="submit"
+        disabled={isPending || imageTaskPending || gallery.preparing || (!productId && state.ok)}
+      >
         {isPending ? "Saving" : submitLabel}
       </button>
     </form>
   );
 }
 
-function VariantField({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-neutral-600">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function Field({
-  label,
-  error,
-  hint,
-  children,
-}: {
-  label: string;
-  error?: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-neutral-700">
-        {label}
-      </span>
-      {children}
-      {hint ? <span className="mt-2 block text-xs text-neutral-500">{hint}</span> : null}
-      {error ? <span className="mt-2 block text-xs text-red-700">{error}</span> : null}
-    </label>
-  );
-}
+const VariantField = Field;

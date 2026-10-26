@@ -39,3 +39,22 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local design and browser verification scratch data
+.impeccable/npm-cache/
+.impeccable/browser-profile/
+.impeccable/tmp/
+.impeccable/build/original-hashes.json
+.impeccable/build/public-content.json
+.impeccable/review/test-results/
+.impeccable/test-postgres/
+.impeccable/build/*.log
+.impeccable/build/public-documents.json
+.impeccable/build/browser-fixture.sql
+.impeccable/build/postgrest.conf
+.impeccable/build/fixture-env.json
+
+.impeccable/review/*.log
+.impeccable/build/dependency-audit.json
+
+.impeccable/build/browser-tsconfig.json

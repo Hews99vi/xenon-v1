@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getActionErrorMessage, logActionError } from "@/lib/actionErrors";
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
+import { requireAdmin } from "@/lib/content/server";
 
 const deliveryZoneSchema = z.object({
   district: z.string().trim().min(2, "District is required."),
@@ -107,11 +108,12 @@ export async function updateDeliveryZoneAction(formData: FormData) {
     isActive: toBoolean(formData.get("isActive")),
   });
 
-  if (!id || !parsed.success) {
-    return;
+  if (!z.string().uuid().safeParse(id).success || !parsed.success) {
+    return { ok: false, message: !parsed.success ? parsed.error.issues[0]?.message || "Check the delivery details." : "Choose a valid delivery zone." };
   }
 
-  const supabase = await createServerSupabaseClient();
+  try {
+  const { db: supabase } = await requireAdmin();
   const district = normalizeLocationName(parsed.data.district);
   const city = parsed.data.city ? normalizeLocationName(parsed.data.city) : null;
   let duplicateQuery = supabase
@@ -124,15 +126,16 @@ export async function updateDeliveryZoneAction(formData: FormData) {
     ? duplicateQuery.ilike("city", city)
     : duplicateQuery.is("city", null);
 
-  const { data: duplicate } = await duplicateQuery.maybeSingle();
+  const { data: duplicate, error: duplicateError } = await duplicateQuery.maybeSingle();
+  if (duplicateError) throw duplicateError;
 
   if (duplicate) {
-    return;
+    return { ok: false, message: "A delivery zone for this district and city already exists." };
   }
 
   const name = city ? `${district} - ${city}` : district;
 
-  await supabase
+  const { data, error } = await supabase
     .from("delivery_zones")
     .update({
       name,
@@ -141,19 +144,31 @@ export async function updateDeliveryZoneAction(formData: FormData) {
       delivery_fee: parsed.data.deliveryFee,
       is_active: parsed.data.isActive,
     })
-    .eq("id", id);
-
+    .eq("id", id).select("id").maybeSingle();
+  if (error) throw error;
+  if (!data) return { ok: false, message: "This delivery zone is no longer available. Refresh the page." };
   revalidatePath("/admin/delivery-zones");
+  return { ok: true, message: "Delivery zone updated." };
+  } catch (error) {
+    logActionError("updateDeliveryZoneAction", error);
+    return { ok: false, message: "Could not update the delivery zone. Check your session and try again." };
+  }
 }
 
 export async function deleteDeliveryZoneAction(formData: FormData) {
   const id = String(formData.get("id") || "");
 
-  if (!id) {
-    return;
+  if (!z.string().uuid().safeParse(id).success)
+    return { ok: false, message: "Choose a valid delivery zone." };
+  try {
+    const { db } = await requireAdmin();
+    const { data, error } = await db.from("delivery_zones").delete().eq("id", id).select("id").maybeSingle();
+    if (error) throw error;
+    if (!data) return { ok: false, message: "This delivery zone is no longer available. Refresh the page." };
+    revalidatePath("/admin/delivery-zones");
+    return { ok: true, message: "Delivery zone deleted." };
+  } catch (error) {
+    logActionError("deleteDeliveryZoneAction", error);
+    return { ok: false, message: "Could not delete the delivery zone. Check your session and try again." };
   }
-
-  const supabase = await createServerSupabaseClient();
-  await supabase.from("delivery_zones").delete().eq("id", id);
-  revalidatePath("/admin/delivery-zones");
 }

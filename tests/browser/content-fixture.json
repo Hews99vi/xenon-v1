@@ -1,0 +1,415 @@
+[
+  {
+    "key": "site",
+    "kind": "site",
+    "slug": "site",
+    "published_revision_id": "441f3ea8-a2d7-4a5a-828d-9d8f5f05ab52",
+    "payload": {
+      "footer": {
+        "columns": [
+          {
+            "links": [
+              {
+                "href": "/products",
+                "label": "All products"
+              },
+              {
+                "href": "/products?tag=new",
+                "label": "New arrivals"
+              }
+            ],
+            "title": "Shop"
+          },
+          {
+            "links": [
+              {
+                "href": "/shipping-policy",
+                "label": "Delivery"
+              },
+              {
+                "href": "/return-policy",
+                "label": "Returns"
+              },
+              {
+                "href": "/privacy-policy",
+                "label": "Privacy"
+              }
+            ],
+            "title": "Information"
+          },
+          {
+            "links": [
+              {
+                "href": "/blog",
+                "label": "Journal"
+              }
+            ],
+            "title": "Explore"
+          }
+        ],
+        "tagline": "Xenon",
+        "tiktokUrl": "",
+        "instagramUrl": "",
+        "supportEmail": "",
+        "supportPhone": "",
+        "whatsappNumber": ""
+      },
+      "version": 1,
+      "sections": [
+        {
+          "id": "bd9f2614-32a7-418e-9cea-a445f1516dd8",
+          "body": "Quality in Every Detail.",
+          "type": "hero",
+          "image": {
+            "x": 50,
+            "y": 50,
+            "alt": "Define Your Style",
+            "src": "/images/hero.png",
+            "mobileSrc": ""
+          },
+          "title": "Define Your Style",
+          "enabled": true,
+          "eyebrow": "",
+          "primary": {
+            "href": "/products?category=signature-collection",
+            "label": "Shop Signature"
+          },
+          "secondary": {
+            "href": "/products?category=evening-wear",
+            "label": "Shop Evening Wear"
+          }
+        },
+        {
+          "id": "latest",
+          "body": "",
+          "link": {
+            "href": "/products",
+            "label": "Shop all"
+          },
+          "type": "products",
+          "title": "Shop the latest styles",
+          "source": "newest",
+          "enabled": true,
+          "eyebrow": "",
+          "audience": "all",
+          "category": "",
+          "productIds": []
+        },
+        {
+          "id": "55e8e93b-ea83-451c-a6c2-5eb2cbf1a0c3",
+          "body": "Monochrome essentials. Zero compromise.",
+          "type": "hero",
+          "image": {
+            "x": 50,
+            "y": 50,
+            "alt": "NO NOISE.\nJUST FORM.",
+            "src": "https://images.unsplash.com/photo-1509631179647-0177331693ae",
+            "mobileSrc": ""
+          },
+          "title": "NO NOISE.\nJUST FORM.",
+          "enabled": false,
+          "eyebrow": "Xenon \u00b7 SS26",
+          "primary": {
+            "href": "/products?category=signature-collection",
+            "label": "Shop Signature"
+          },
+          "secondary": {
+            "href": "/products?category=evening-wear",
+            "label": "Shop Evening Wear"
+          }
+        },
+        {
+          "id": "7ae79100-5758-4e7e-a0c5-d7fb0ae01464",
+          "body": "Built for quiet confidence \u2014 tailored essentials for day and night.",
+          "type": "campaign",
+          "image": {
+            "x": 50,
+            "y": 50,
+            "alt": "THE MONOCHROME UNIFORM",
+            "src": "https://images.unsplash.com/photo-1483985988355-763728e1935b",
+            "mobileSrc": ""
+          },
+          "title": "THE MONOCHROME UNIFORM",
+          "enabled": true,
+          "eyebrow": "Campaign",
+          "primary": {
+            "href": "/products",
+            "label": "Shop Now"
+          },
+          "secondary": {
+            "href": "",
+            "label": ""
+          }
+        },
+        {
+          "id": "3a9c70e1-10be-40d4-8a25-f6548eb0866b",
+          "body": "Crafted for comfort.",
+          "type": "campaign",
+          "image": {
+            "x": 50,
+            "y": 50,
+            "alt": "Shop The Everyday Collection",
+            "src": "https://dlnazvtyidociivfxubv.supabase.co/storage/v1/object/public/banner-images/banners/9d5c73f5-fb76-4ad8-82ab-9af2848b6752-3.png",
+            "mobileSrc": ""
+          },
+          "title": "Shop The Everyday Collection",
+          "enabled": true,
+          "eyebrow": "",
+          "primary": {
+            "href": "/products?gender=women",
+            "label": "Shop Women"
+          },
+          "secondary": {
+            "href": "/products?gender=women",
+            "label": "Shop Women"
+          }
+        },
+        {
+          "id": "categories-all",
+          "body": "",
+          "link": {
+            "href": "",
+            "label": ""
+          },
+          "type": "categories",
+          "title": "Shop by category",
+          "source": "all",
+          "enabled": true,
+          "eyebrow": "",
+          "audience": "all",
+          "categoryIds": []
+        },
+        {
+          "id": "3ba23ceb-2da7-4576-b8e8-d7d36fdce331",
+          "body": "",
+          "type": "occasions",
+          "items": [
+            {
+              "id": "e330b15b-c624-425f-ac19-40f87f7b6d91",
+              "body": "Sharp essentials for long days.",
+              "link": {
+                "href": "/products?q=work",
+                "label": "Shop Now"
+              },
+              "image": {
+                "x": 42,
+                "y": 18,
+                "alt": "WORK",
+                "src": "https://images.unsplash.com/photo-1529139574466-a303027c1d8b",
+                "mobileSrc": ""
+              },
+              "title": "WORK",
+              "enabled": true,
+              "audience": "all"
+            },
+            {
+              "id": "eca3f2b2-e833-4281-a323-4e95835ef1fb",
+              "body": "Quiet pieces after dark.",
+              "link": {
+                "href": "/products?q=evening",
+                "label": "Shop Now"
+              },
+              "image": {
+                "x": 54,
+                "y": 16,
+                "alt": "EVENING",
+                "src": "https://images.unsplash.com/photo-1496747611176-843222e1e57c",
+                "mobileSrc": ""
+              },
+              "title": "EVENING",
+              "enabled": true,
+              "audience": "all"
+            },
+            {
+              "id": "3a353454-dda3-4fbb-a7ea-a8d05f29062f",
+              "body": "Relaxed silhouettes, refined.",
+              "link": {
+                "href": "/products?q=weekend",
+                "label": "Shop Now"
+              },
+              "image": {
+                "x": 62,
+                "y": 20,
+                "alt": "WEEKEND",
+                "src": "https://images.unsplash.com/photo-1483985988355-763728e1935b",
+                "mobileSrc": ""
+              },
+              "title": "WEEKEND",
+              "enabled": true,
+              "audience": "all"
+            },
+            {
+              "id": "cb29198c-9fa8-40dc-88d8-4ba9a68ac79e",
+              "body": "Movement without noise.",
+              "link": {
+                "href": "/products?q=travel",
+                "label": "Shop Now"
+              },
+              "image": {
+                "x": 48,
+                "y": 22,
+                "alt": "TRAVEL",
+                "src": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f",
+                "mobileSrc": ""
+              },
+              "title": "TRAVEL",
+              "enabled": true,
+              "audience": "all"
+            }
+          ],
+          "title": "SHOP BY OCCASION",
+          "enabled": true,
+          "eyebrow": "STYLE CODES",
+          "audience": "all"
+        },
+        {
+          "id": "accessories",
+          "body": "",
+          "link": {
+            "href": "/categories/accessories",
+            "label": "Shop accessories"
+          },
+          "type": "products",
+          "title": "Accessories",
+          "source": "category",
+          "enabled": true,
+          "eyebrow": "",
+          "audience": "all",
+          "category": "accessories",
+          "productIds": []
+        },
+        {
+          "id": "cccc2296-dac6-4762-9674-41853f3608ae",
+          "body": "Xenon is built around monochrome silhouettes, clean construction, and everyday refinement.",
+          "link": {
+            "href": "",
+            "label": ""
+          },
+          "type": "story",
+          "image": {
+            "x": 42,
+            "y": 20,
+            "alt": "Fabric / Detail",
+            "src": "https://images.unsplash.com/photo-1516762689617-e1cffcef479d",
+            "mobileSrc": ""
+          },
+          "title": "PRECISION IN RESTRAINT",
+          "values": [
+            "CONSIDERED SILHOUETTES",
+            "EVERYDAY LUXURY",
+            "MEN AND WOMEN EDITS"
+          ],
+          "enabled": true,
+          "eyebrow": "ATELIER"
+        }
+      ],
+      "navigation": [
+        {
+          "href": "/products?gender=women",
+          "label": "Women",
+          "audience": "women",
+          "children": []
+        },
+        {
+          "href": "/products?gender=men",
+          "label": "Men",
+          "audience": "men",
+          "children": []
+        },
+        {
+          "href": "/products?category=accessories",
+          "label": "Accessories",
+          "audience": "all",
+          "children": []
+        },
+        {
+          "href": "/products?tag=new",
+          "label": "New Arrivals",
+          "audience": "all",
+          "children": []
+        }
+      ],
+      "newsletter": {
+        "body": "News and new arrivals from Xenon.",
+        "title": "Stay in the know",
+        "enabled": true
+      },
+      "announcement": {
+        "href": "",
+        "text": "",
+        "enabled": false
+      },
+      "legacyAssets": [
+        "https://dlnazvtyidociivfxubv.supabase.co/storage/v1/object/public/banner-images/banners/9d5c73f5-fb76-4ad8-82ab-9af2848b6752-3.png",
+        "https://images.unsplash.com/photo-1509631179647-0177331693ae",
+        "https://images.unsplash.com/photo-1483985988355-763728e1935b",
+        "https://dlnazvtyidociivfxubv.supabase.co/storage/v1/object/public/banner-images/banners/56949d48-62ec-4ef8-99f5-48d20d9599a6-hero.png",
+        "https://images.unsplash.com/photo-1523170335258-f5ed11844a49",
+        "https://images.unsplash.com/photo-1516762689617-e1cffcef479d",
+        "https://images.unsplash.com/photo-1496747611176-843222e1e57c",
+        "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f",
+        "https://images.unsplash.com/photo-1529139574466-a303027c1d8b"
+      ]
+    }
+  },
+  {
+    "key": "page:return-policy",
+    "kind": "page",
+    "slug": "return-policy",
+    "payload": {
+      "version": 1,
+      "title": "Returns",
+      "body": "Local browser test content. This is not a published store policy.",
+      "excerpt": "",
+      "seoTitle": "",
+      "seoDescription": "",
+      "image": {
+        "src": "",
+        "mobileSrc": "",
+        "alt": "",
+        "x": 50,
+        "y": 50
+      }
+    }
+  },
+  {
+    "key": "page:shipping-policy",
+    "kind": "page",
+    "slug": "shipping-policy",
+    "payload": {
+      "version": 1,
+      "title": "Delivery",
+      "body": "Local browser test content. This is not a published store policy.",
+      "excerpt": "",
+      "seoTitle": "",
+      "seoDescription": "",
+      "image": {
+        "src": "",
+        "mobileSrc": "",
+        "alt": "",
+        "x": 50,
+        "y": 50
+      }
+    }
+  },
+  {
+    "key": "page:privacy-policy",
+    "kind": "page",
+    "slug": "privacy-policy",
+    "payload": {
+      "version": 1,
+      "title": "Privacy",
+      "body": "Local browser test content. This is not a published store policy.",
+      "excerpt": "",
+      "seoTitle": "",
+      "seoDescription": "",
+      "image": {
+        "src": "",
+        "mobileSrc": "",
+        "alt": "",
+        "x": 50,
+        "y": 50
+      }
+    }
+  }
+]

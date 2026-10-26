@@ -16,7 +16,7 @@ export default async function EditCategoryPage({ params }: EditCategoryPageProps
   const supabase = await createServerSupabaseClient();
   const { data: category } = await supabase
     .from("categories")
-    .select("id, name, slug, description, image_url, is_active, sort_order")
+    .select("id, audience, name, slug, description, image_url, is_active, sort_order")
     .eq("id", id)
     .maybeSingle();
 
@@ -40,6 +40,7 @@ export default async function EditCategoryPage({ params }: EditCategoryPageProps
           action={action}
           submitLabel="Update category"
           defaultValues={{
+            audience: category.audience || "",
             name: category.name,
             slug: category.slug,
             description: category.description || "",
